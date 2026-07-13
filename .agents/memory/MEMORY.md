@@ -1,0 +1,1 @@
+- [Baileys WhatsApp session persistence](baileys-session-persistence.md) — local `.baileys_auth` session dir risks being wiped on Autoscale deploys; matters for any WhatsApp-bot-on-Replit project.
