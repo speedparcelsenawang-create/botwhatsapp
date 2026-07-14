@@ -15,6 +15,7 @@ WhatsApp scheduled-message bot with a web dashboard (imported project).
 
 ## Notes
 - The imported `.env.example` contained a live-looking Neon Postgres connection string. It was left untouched but is not used — the app connects to Replit's own Postgres instead. Treat that credential as compromised if it was ever real.
+- Fixed the WhatsApp `.schedule` command's "open web schedule" button: `getPublicBaseUrl()` in `src/services/whatsappService.js` only checked `PUBLIC_URL`/`APP_URL`/Railway env vars, so on Replit (none of those set) it fell back to `http://localhost:3000`, which is unreachable from a phone. Added `REPLIT_DOMAINS`/`REPLIT_DEV_DOMAIN` as candidates so the button now points to the live `https://<repl>.replit.dev` URL.
 
 ## User preferences
 None recorded yet.

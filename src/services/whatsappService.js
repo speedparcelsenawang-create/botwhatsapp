@@ -333,6 +333,8 @@ function getPublicBaseUrl() {
     process.env.WEBSITE_URL,
     process.env.RAILWAY_STATIC_URL,
     process.env.RAILWAY_PUBLIC_DOMAIN,
+    process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : null,
+    process.env.REPLIT_DEV_DOMAIN,
   ];
 
   for (const candidate of candidateValues) {
