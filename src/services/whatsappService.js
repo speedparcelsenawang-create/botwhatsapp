@@ -1539,6 +1539,26 @@ class WhatsAppService {
     return false;
   }
 
+  async sendBuiltInUsageMessage(chatId, key) {
+    if (!this.sock) return;
+
+    const textKey = `${key}UsageHelpText`;
+    const buttonsKey = `${key}UsageButtons`;
+    const builtInSettings = builtInCommandSettingsStore.getSettings();
+    const usageText = builtInSettings[textKey];
+    const usageButtons = buildUsageInteractiveButtons(builtInSettings[buttonsKey]);
+
+    if (!usageButtons.length) {
+      await this.sock.sendMessage(chatId, { text: usageText });
+      return;
+    }
+
+    await sendInteractiveButtons(this.sock, chatId, {
+      text: usageText,
+      buttons: usageButtons,
+    });
+  }
+
   normalizeToolFileName(value, fallbackName) {
     const fallback = String(fallbackName || 'file.bin');
     const raw = String(value || '').trim();
@@ -1649,9 +1669,7 @@ class WhatsAppService {
 
     const target = this.resolveFileToolMedia(content, { documentOnly: false });
     if (!target) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Reply mana-mana media/file dengan .zip untuk compress menjadi ZIP.',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'zip');
       return;
     }
 
@@ -1700,9 +1718,7 @@ class WhatsAppService {
 
     const target = this.resolveFileToolMedia(content, { documentOnly: true });
     if (!target) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Reply fail ZIP dengan .unzip untuk extract kandungan.',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'unzip');
       return;
     }
 
@@ -1770,9 +1786,7 @@ class WhatsAppService {
 
     const target = this.resolveFileToolMedia(content, { documentOnly: true });
     if (!target) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Reply fail PDF dengan .pdf2txt untuk extract text.',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'pdf2txt');
       return;
     }
 
@@ -1825,9 +1839,7 @@ class WhatsAppService {
 
     const textBody = stripCommandPrefix(rawText);
     if (!textBody) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Usage: .maketxt <isi teks>\nContoh: .maketxt Ini nota penting saya',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'maketxt');
       return;
     }
 
@@ -1845,9 +1857,7 @@ class WhatsAppService {
 
     const payload = stripCommandPrefix(rawText);
     if (!payload) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Usage: .qrcode <text atau URL>\nContoh: .qrcode https://example.com',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'qrcode');
       return;
     }
 
@@ -1877,9 +1887,7 @@ class WhatsAppService {
 
     const target = this.resolveFileToolMedia(content, { documentOnly: false });
     if (!target || (target.type !== 'image' && target.type !== 'sticker')) {
-      await this.sock.sendMessage(chatId, {
-        text: 'Kirim/reply gambar dengan .imagetopdf untuk extract text dan convert ke PDF.',
-      });
+      await this.sendBuiltInUsageMessage(chatId, 'imagetopdf');
       return;
     }
 

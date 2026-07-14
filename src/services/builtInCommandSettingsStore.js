@@ -9,6 +9,12 @@ const DEFAULT_SCHEDULE_LIST_EMPTY_TEXT = 'No schedules found for this chat.';
 const DEFAULT_SCHEDULE_DELETE_USAGE_TEXT = 'Usage: .scheduledelete <id>\nExample: .scheduledelete 12';
 const DEFAULT_VV_USAGE_HELP_TEXT = 'Reply to a "view once" image/video message with .vv to reopen it.';
 const DEFAULT_STICKER_USAGE_HELP_TEXT = 'Usage: kirim/reply gambar, video, atau sticker lalu ketik .sticker';
+const DEFAULT_ZIP_USAGE_HELP_TEXT = 'Reply mana-mana media/file dengan .zip untuk compress menjadi ZIP.';
+const DEFAULT_UNZIP_USAGE_HELP_TEXT = 'Reply fail ZIP dengan .unzip untuk extract kandungan.';
+const DEFAULT_PDF2TXT_USAGE_HELP_TEXT = 'Reply fail PDF dengan .pdf2txt untuk extract text.';
+const DEFAULT_MAKETXT_USAGE_HELP_TEXT = 'Usage: .maketxt <isi teks>\nContoh: .maketxt Ini nota penting saya';
+const DEFAULT_QRCODE_USAGE_HELP_TEXT = 'Usage: .qrcode <text atau URL>\nContoh: .qrcode https://example.com';
+const DEFAULT_IMAGETOPDF_USAGE_HELP_TEXT = 'Kirim/reply gambar dengan .imagetopdf untuk extract text dan convert ke PDF.';
 const DEFAULT_SCHEDULE_USAGE_BUTTON_TEXT = 'Schedule Web';
 const DEFAULT_SCHEDULE_USAGE_BUTTON_URL = '';
 const DEFAULT_SCHEDULE_USAGE_BUTTONS = [
@@ -33,7 +39,28 @@ const DEFAULT_SETTINGS = {
   vvUsageButtons: [],
   stickerUsageHelpText: DEFAULT_STICKER_USAGE_HELP_TEXT,
   stickerUsageButtons: [],
+  zipUsageHelpText: DEFAULT_ZIP_USAGE_HELP_TEXT,
+  zipUsageButtons: [],
+  unzipUsageHelpText: DEFAULT_UNZIP_USAGE_HELP_TEXT,
+  unzipUsageButtons: [],
+  pdf2txtUsageHelpText: DEFAULT_PDF2TXT_USAGE_HELP_TEXT,
+  pdf2txtUsageButtons: [],
+  maketxtUsageHelpText: DEFAULT_MAKETXT_USAGE_HELP_TEXT,
+  maketxtUsageButtons: [],
+  qrcodeUsageHelpText: DEFAULT_QRCODE_USAGE_HELP_TEXT,
+  qrcodeUsageButtons: [],
+  imagetopdfUsageHelpText: DEFAULT_IMAGETOPDF_USAGE_HELP_TEXT,
+  imagetopdfUsageButtons: [],
 };
+
+const SIMPLE_TEXT_FIELDS = [
+  { key: 'zipUsageHelpText', buttonsKey: 'zipUsageButtons', fallback: DEFAULT_ZIP_USAGE_HELP_TEXT, label: 'zipUsageHelpText' },
+  { key: 'unzipUsageHelpText', buttonsKey: 'unzipUsageButtons', fallback: DEFAULT_UNZIP_USAGE_HELP_TEXT, label: 'unzipUsageHelpText' },
+  { key: 'pdf2txtUsageHelpText', buttonsKey: 'pdf2txtUsageButtons', fallback: DEFAULT_PDF2TXT_USAGE_HELP_TEXT, label: 'pdf2txtUsageHelpText' },
+  { key: 'maketxtUsageHelpText', buttonsKey: 'maketxtUsageButtons', fallback: DEFAULT_MAKETXT_USAGE_HELP_TEXT, label: 'maketxtUsageHelpText' },
+  { key: 'qrcodeUsageHelpText', buttonsKey: 'qrcodeUsageButtons', fallback: DEFAULT_QRCODE_USAGE_HELP_TEXT, label: 'qrcodeUsageHelpText' },
+  { key: 'imagetopdfUsageHelpText', buttonsKey: 'imagetopdfUsageButtons', fallback: DEFAULT_IMAGETOPDF_USAGE_HELP_TEXT, label: 'imagetopdfUsageHelpText' },
+];
 
 function normalizeScheduleUsageHelpText(value) {
   const text = String(value || '').trim();
@@ -159,13 +186,19 @@ function normalizeLegacyButtons(source) {
   }];
 }
 
+function normalizeSimpleTextValue(value, fallback) {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  return text;
+}
+
 function normalizeSettings(value) {
   const source = value && typeof value === 'object' ? value : {};
   const hasButtonsArray = Object.prototype.hasOwnProperty.call(source, 'scheduleUsageButtons');
   const normalizedButtons = normalizeInteractiveButtons(source.scheduleUsageButtons);
   const buttons = hasButtonsArray ? normalizedButtons : normalizeLegacyButtons(source);
 
-  return {
+  const result = {
     scheduleUsageHelpText: normalizeScheduleUsageHelpText(source.scheduleUsageHelpText),
     scheduleUsageButtons: buttons,
     scheduleListEmptyText: normalizeScheduleListEmptyText(source.scheduleListEmptyText),
@@ -177,6 +210,13 @@ function normalizeSettings(value) {
     stickerUsageHelpText: normalizeStickerUsageHelpText(source.stickerUsageHelpText),
     stickerUsageButtons: normalizeInteractiveButtons(source.stickerUsageButtons),
   };
+
+  for (const field of SIMPLE_TEXT_FIELDS) {
+    result[field.key] = normalizeSimpleTextValue(source[field.key], field.fallback);
+    result[field.buttonsKey] = normalizeInteractiveButtons(source[field.buttonsKey]);
+  }
+
+  return result;
 }
 
 function loadSettings() {
@@ -201,7 +241,7 @@ function persistSettings() {
 }
 
 function getSettings() {
-  return {
+  const result = {
     scheduleUsageHelpText: settings.scheduleUsageHelpText,
     scheduleUsageButtons: settings.scheduleUsageButtons.map((item) => ({ ...item })),
     scheduleListEmptyText: settings.scheduleListEmptyText,
@@ -213,6 +253,13 @@ function getSettings() {
     stickerUsageHelpText: settings.stickerUsageHelpText,
     stickerUsageButtons: settings.stickerUsageButtons.map((item) => ({ ...item })),
   };
+
+  for (const field of SIMPLE_TEXT_FIELDS) {
+    result[field.key] = settings[field.key];
+    result[field.buttonsKey] = settings[field.buttonsKey].map((item) => ({ ...item }));
+  }
+
+  return result;
 }
 
 function getScheduleUsageHelpText() {
@@ -330,6 +377,11 @@ function validateBuiltInButton(button, label = 'Button') {
 function updateSettings(partial) {
   const payload = partial && typeof partial === 'object' ? partial : {};
 
+  const hasAnySimpleField = SIMPLE_TEXT_FIELDS.some((field) => (
+    Object.prototype.hasOwnProperty.call(payload, field.key)
+    || Object.prototype.hasOwnProperty.call(payload, field.buttonsKey)
+  ));
+
   if (!Object.prototype.hasOwnProperty.call(payload, 'scheduleUsageHelpText')
     && !Object.prototype.hasOwnProperty.call(payload, 'scheduleUsageButtons')
     && !Object.prototype.hasOwnProperty.call(payload, 'scheduleListEmptyText')
@@ -339,7 +391,8 @@ function updateSettings(partial) {
     && !Object.prototype.hasOwnProperty.call(payload, 'vvUsageHelpText')
     && !Object.prototype.hasOwnProperty.call(payload, 'vvUsageButtons')
     && !Object.prototype.hasOwnProperty.call(payload, 'stickerUsageHelpText')
-    && !Object.prototype.hasOwnProperty.call(payload, 'stickerUsageButtons')) {
+    && !Object.prototype.hasOwnProperty.call(payload, 'stickerUsageButtons')
+    && !hasAnySimpleField) {
     throw new Error('At least one built-in setting is required');
   }
 
@@ -381,6 +434,41 @@ function updateSettings(partial) {
 
   if (Object.prototype.hasOwnProperty.call(payload, 'stickerUsageHelpText') && typeof payload.stickerUsageHelpText !== 'string') {
     throw new Error('stickerUsageHelpText must be a string');
+  }
+
+  for (const field of SIMPLE_TEXT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(payload, field.key) && typeof payload[field.key] !== 'string') {
+      throw new Error(`${field.key} must be a string`);
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, field.buttonsKey) && !Array.isArray(payload[field.buttonsKey])) {
+      throw new Error(`${field.buttonsKey} must be an array`);
+    }
+  }
+
+  const simpleFieldValues = {};
+  for (const field of SIMPLE_TEXT_FIELDS) {
+    const text = Object.prototype.hasOwnProperty.call(payload, field.key)
+      ? String(payload[field.key] || '').trim()
+      : settings[field.key];
+    const buttons = Object.prototype.hasOwnProperty.call(payload, field.buttonsKey)
+      ? normalizeInteractiveButtons(payload[field.buttonsKey])
+      : settings[field.buttonsKey].map((item) => ({ ...item }));
+
+    if (!text) {
+      throw new Error(`${field.key} is required`);
+    }
+    if (text.length > 1000) {
+      throw new Error(`${field.key} is too long (max 1000 characters)`);
+    }
+    if (buttons.length > 10) {
+      throw new Error(`${field.buttonsKey} is too long (max 10 buttons)`);
+    }
+    buttons.forEach((button, index) => {
+      validateBuiltInButton(button, `${field.buttonsKey}[${index}]`);
+    });
+
+    simpleFieldValues[field.key] = text;
+    simpleFieldValues[field.buttonsKey] = buttons;
   }
 
   const text = Object.prototype.hasOwnProperty.call(payload, 'scheduleUsageHelpText')
@@ -494,6 +582,11 @@ function updateSettings(partial) {
   const normalizedStickerButtonsJson = JSON.stringify(stickerUsageButtons);
   const currentStickerButtonsJson = JSON.stringify(settings.stickerUsageButtons);
 
+  const hasSimpleFieldChanges = SIMPLE_TEXT_FIELDS.some((field) => (
+    settings[field.key] !== simpleFieldValues[field.key]
+    || JSON.stringify(settings[field.buttonsKey]) !== JSON.stringify(simpleFieldValues[field.buttonsKey])
+  ));
+
   if (settings.scheduleUsageHelpText !== text
     || normalizedButtonsJson !== currentButtonsJson
     || settings.scheduleListEmptyText !== scheduleListEmptyText
@@ -503,7 +596,8 @@ function updateSettings(partial) {
     || settings.vvUsageHelpText !== vvUsageHelpText
     || normalizedVvButtonsJson !== currentVvButtonsJson
     || settings.stickerUsageHelpText !== stickerUsageHelpText
-    || normalizedStickerButtonsJson !== currentStickerButtonsJson) {
+    || normalizedStickerButtonsJson !== currentStickerButtonsJson
+    || hasSimpleFieldChanges) {
     settings.scheduleUsageHelpText = text;
     settings.scheduleUsageButtons = buttons;
     settings.scheduleListEmptyText = scheduleListEmptyText;
@@ -514,6 +608,10 @@ function updateSettings(partial) {
     settings.vvUsageButtons = vvUsageButtons;
     settings.stickerUsageHelpText = stickerUsageHelpText;
     settings.stickerUsageButtons = stickerUsageButtons;
+    for (const field of SIMPLE_TEXT_FIELDS) {
+      settings[field.key] = simpleFieldValues[field.key];
+      settings[field.buttonsKey] = simpleFieldValues[field.buttonsKey];
+    }
     persistSettings();
   }
 

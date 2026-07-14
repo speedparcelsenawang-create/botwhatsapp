@@ -579,42 +579,47 @@ function createDashboardRouter(whatsappService) {
   router.put('/api/built-in-commands', (req, res) => {
     try {
       const payload = req.body || {};
-      const hasScheduleText = Object.prototype.hasOwnProperty.call(payload, 'scheduleUsageHelpText');
-      const hasScheduleButtons = Object.prototype.hasOwnProperty.call(payload, 'scheduleUsageButtons');
-      const hasScheduleListEmptyText = Object.prototype.hasOwnProperty.call(payload, 'scheduleListEmptyText');
-      const hasScheduleListButtons = Object.prototype.hasOwnProperty.call(payload, 'scheduleListButtons');
-      const hasScheduleDeleteUsageText = Object.prototype.hasOwnProperty.call(payload, 'scheduleDeleteUsageText');
-      const hasScheduleDeleteButtons = Object.prototype.hasOwnProperty.call(payload, 'scheduleDeleteButtons');
-      const hasVvText = Object.prototype.hasOwnProperty.call(payload, 'vvUsageHelpText');
-      const hasVvButtons = Object.prototype.hasOwnProperty.call(payload, 'vvUsageButtons');
-      const hasStickerText = Object.prototype.hasOwnProperty.call(payload, 'stickerUsageHelpText');
-      const hasStickerButtons = Object.prototype.hasOwnProperty.call(payload, 'stickerUsageButtons');
+      // Only pass through keys the client actually sent — updateSettings treats a
+      // present-but-undefined key as "field was submitted", so building the object
+      // with every key up front (even as `undefined`) would incorrectly require
+      // every other built-in command's text whenever only one was being edited.
+      const allowedKeys = [
+        'scheduleUsageHelpText',
+        'scheduleUsageButtons',
+        'scheduleListEmptyText',
+        'scheduleListButtons',
+        'scheduleDeleteUsageText',
+        'scheduleDeleteButtons',
+        'vvUsageHelpText',
+        'vvUsageButtons',
+        'stickerUsageHelpText',
+        'stickerUsageButtons',
+        'zipUsageHelpText',
+        'zipUsageButtons',
+        'unzipUsageHelpText',
+        'unzipUsageButtons',
+        'pdf2txtUsageHelpText',
+        'pdf2txtUsageButtons',
+        'maketxtUsageHelpText',
+        'maketxtUsageButtons',
+        'qrcodeUsageHelpText',
+        'qrcodeUsageButtons',
+        'imagetopdfUsageHelpText',
+        'imagetopdfUsageButtons',
+      ];
 
-      if (!hasScheduleText
-        && !hasScheduleButtons
-        && !hasScheduleListEmptyText
-        && !hasScheduleListButtons
-        && !hasScheduleDeleteUsageText
-        && !hasScheduleDeleteButtons
-        && !hasVvText
-        && !hasVvButtons
-        && !hasStickerText
-        && !hasStickerButtons) {
+      const updatePayload = {};
+      for (const key of allowedKeys) {
+        if (Object.prototype.hasOwnProperty.call(payload, key)) {
+          updatePayload[key] = payload[key];
+        }
+      }
+
+      if (!Object.keys(updatePayload).length) {
         return res.status(400).json({ error: 'At least one built-in setting field is required' });
       }
 
-      const updated = builtInCommandSettingsStore.updateSettings({
-        scheduleUsageHelpText: hasScheduleText ? payload.scheduleUsageHelpText : undefined,
-        scheduleUsageButtons: hasScheduleButtons ? payload.scheduleUsageButtons : undefined,
-        scheduleListEmptyText: hasScheduleListEmptyText ? payload.scheduleListEmptyText : undefined,
-        scheduleListButtons: hasScheduleListButtons ? payload.scheduleListButtons : undefined,
-        scheduleDeleteUsageText: hasScheduleDeleteUsageText ? payload.scheduleDeleteUsageText : undefined,
-        scheduleDeleteButtons: hasScheduleDeleteButtons ? payload.scheduleDeleteButtons : undefined,
-        vvUsageHelpText: hasVvText ? payload.vvUsageHelpText : undefined,
-        vvUsageButtons: hasVvButtons ? payload.vvUsageButtons : undefined,
-        stickerUsageHelpText: hasStickerText ? payload.stickerUsageHelpText : undefined,
-        stickerUsageButtons: hasStickerButtons ? payload.stickerUsageButtons : undefined,
-      });
+      const updated = builtInCommandSettingsStore.updateSettings(updatePayload);
 
       return res.json(updated);
     } catch (error) {

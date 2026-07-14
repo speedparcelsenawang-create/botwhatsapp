@@ -200,6 +200,20 @@ const DEFAULT_SCHEDULE_LIST_EMPTY_TEXT = 'No schedules found for this chat.';
 const DEFAULT_SCHEDULE_DELETE_USAGE_TEXT = 'Usage: .scheduledelete <id>\nExample: .scheduledelete 12';
 const DEFAULT_VV_USAGE_HELP_TEXT = 'Reply to a "view once" image/video message with .vv to reopen it.';
 const DEFAULT_STICKER_USAGE_HELP_TEXT = 'Usage: kirim/reply gambar, video, atau sticker lalu ketik .sticker';
+const DEFAULT_ZIP_USAGE_HELP_TEXT = 'Reply mana-mana media/file dengan .zip untuk compress menjadi ZIP.';
+const DEFAULT_UNZIP_USAGE_HELP_TEXT = 'Reply fail ZIP dengan .unzip untuk extract kandungan.';
+const DEFAULT_PDF2TXT_USAGE_HELP_TEXT = 'Reply fail PDF dengan .pdf2txt untuk extract text.';
+const DEFAULT_MAKETXT_USAGE_HELP_TEXT = 'Usage: .maketxt <isi teks>\nContoh: .maketxt Ini nota penting saya';
+const DEFAULT_QRCODE_USAGE_HELP_TEXT = 'Usage: .qrcode <text atau URL>\nContoh: .qrcode https://example.com';
+const DEFAULT_IMAGETOPDF_USAGE_HELP_TEXT = 'Kirim/reply gambar dengan .imagetopdf untuk extract text dan convert ke PDF.';
+const SIMPLE_BUILTIN_TEXT_FIELDS = [
+  { key: 'zipUsageHelpText', buttonsKey: 'zipUsageButtons', fallback: DEFAULT_ZIP_USAGE_HELP_TEXT },
+  { key: 'unzipUsageHelpText', buttonsKey: 'unzipUsageButtons', fallback: DEFAULT_UNZIP_USAGE_HELP_TEXT },
+  { key: 'pdf2txtUsageHelpText', buttonsKey: 'pdf2txtUsageButtons', fallback: DEFAULT_PDF2TXT_USAGE_HELP_TEXT },
+  { key: 'maketxtUsageHelpText', buttonsKey: 'maketxtUsageButtons', fallback: DEFAULT_MAKETXT_USAGE_HELP_TEXT },
+  { key: 'qrcodeUsageHelpText', buttonsKey: 'qrcodeUsageButtons', fallback: DEFAULT_QRCODE_USAGE_HELP_TEXT },
+  { key: 'imagetopdfUsageHelpText', buttonsKey: 'imagetopdfUsageButtons', fallback: DEFAULT_IMAGETOPDF_USAGE_HELP_TEXT },
+];
 const DEFAULT_SCHEDULE_USAGE_BUTTON_TEXT = 'Schedule Web';
 const DEFAULT_SCHEDULE_USAGE_BUTTONS = [
   {
@@ -986,7 +1000,7 @@ function normalizeBuiltInCommandSettings(value) {
   const vvUsageButtons = normalizeButtons(rawVvButtons);
   const stickerUsageButtons = normalizeButtons(rawStickerButtons);
 
-  return {
+  const result = {
     scheduleUsageHelpText: scheduleUsageHelpText || DEFAULT_SCHEDULE_USAGE_HELP_TEXT,
     scheduleListEmptyText: scheduleListEmptyText || DEFAULT_SCHEDULE_LIST_EMPTY_TEXT,
     scheduleDeleteUsageText: scheduleDeleteUsageText || DEFAULT_SCHEDULE_DELETE_USAGE_TEXT,
@@ -1000,6 +1014,15 @@ function normalizeBuiltInCommandSettings(value) {
     vvUsageButtons: hasVvButtonsArray ? vvUsageButtons : [],
     stickerUsageButtons: hasStickerButtonsArray ? stickerUsageButtons : [],
   };
+
+  for (const field of SIMPLE_BUILTIN_TEXT_FIELDS) {
+    const hasTextValue = String(source[field.key] || '').trim();
+    const hasButtonsArray = Array.isArray(source[field.buttonsKey]);
+    result[field.key] = hasTextValue || field.fallback;
+    result[field.buttonsKey] = hasButtonsArray ? normalizeButtons(source[field.buttonsKey]) : [];
+  }
+
+  return result;
 }
 
 function applyBuiltInCommandSettingsUI() {
@@ -5327,7 +5350,39 @@ const BUILT_IN_COMMAND_EDITOR_META = {
     description: 'Update usage/help text shown when .sticker is used without media.',
     textLabel: 'Help text',
   },
+  zip: {
+    title: 'Edit .zip',
+    description: 'Update usage/help text shown when .zip is used without a replied file.',
+    textLabel: 'Help text',
+  },
+  unzip: {
+    title: 'Edit .unzip',
+    description: 'Update usage/help text shown when .unzip is used without a replied ZIP file.',
+    textLabel: 'Help text',
+  },
+  pdf2txt: {
+    title: 'Edit .pdf2txt',
+    description: 'Update usage/help text shown when .pdf2txt is used without a replied PDF.',
+    textLabel: 'Help text',
+  },
+  maketxt: {
+    title: 'Edit .maketxt',
+    description: 'Update usage/help text shown when .maketxt is used without any text.',
+    textLabel: 'Usage/help text',
+  },
+  qrcode: {
+    title: 'Edit .qrcode',
+    description: 'Update usage/help text shown when .qrcode is used without any text/URL.',
+    textLabel: 'Usage/help text',
+  },
+  imagetopdf: {
+    title: 'Edit .imagetopdf',
+    description: 'Update usage/help text shown when .imagetopdf is used without a replied image.',
+    textLabel: 'Help text',
+  },
 };
+
+const SIMPLE_BUILTIN_COMMAND_KEYS = ['zip', 'unzip', 'pdf2txt', 'maketxt', 'qrcode', 'imagetopdf'];
 
 function clearBuiltInEditorButtonRows() {
   if (!builtInEditorButtonRows) return;
@@ -5429,6 +5484,11 @@ function openBuiltInCommandModal(commandKey) {
     if (builtInEditorText) {
       builtInEditorText.value = String(builtInCommandSettings.stickerUsageHelpText || '').trim() || DEFAULT_STICKER_USAGE_HELP_TEXT;
     }
+  } else if (SIMPLE_BUILTIN_COMMAND_KEYS.includes(key)) {
+    const field = SIMPLE_BUILTIN_TEXT_FIELDS.find((item) => item.key === `${key}UsageHelpText`);
+    if (builtInEditorText && field) {
+      builtInEditorText.value = String(builtInCommandSettings[field.key] || '').trim() || field.fallback;
+    }
   }
 
   if (builtInEditorButtonsSection) builtInEditorButtonsSection.hidden = false;
@@ -5441,6 +5501,10 @@ function openBuiltInCommandModal(commandKey) {
     vv: builtInCommandSettings.vvUsageButtons,
     sticker: builtInCommandSettings.stickerUsageButtons,
   };
+  SIMPLE_BUILTIN_TEXT_FIELDS.forEach((field) => {
+    const simpleKey = field.key.replace(/UsageHelpText$/, '');
+    buttonsByKey[simpleKey] = builtInCommandSettings[field.buttonsKey];
+  });
   const activeButtons = Array.isArray(buttonsByKey[key]) ? buttonsByKey[key] : [];
   activeButtons.forEach((button) => addBuiltInEditorButtonRow(button));
 
@@ -5556,6 +5620,22 @@ if (builtInEditorSaveBtn) {
       }
       payload.stickerUsageHelpText = text;
       payload.stickerUsageButtons = buttons;
+    }
+
+    if (SIMPLE_BUILTIN_COMMAND_KEYS.includes(key)) {
+      const field = SIMPLE_BUILTIN_TEXT_FIELDS.find((item) => item.key === `${key}UsageHelpText`);
+      if (field) {
+        const buttons = collectBuiltInEditorButtons();
+        if (buttons.length > 10) {
+          if (builtInEditorFeedback) {
+            builtInEditorFeedback.textContent = `Maksimum 10 button untuk .${key}.`;
+            builtInEditorFeedback.style.color = '#b42318';
+          }
+          return;
+        }
+        payload[field.key] = text;
+        payload[field.buttonsKey] = buttons;
+      }
     }
 
     setButtonLoading(builtInEditorSaveBtn, true, 'Saving built-in command');
